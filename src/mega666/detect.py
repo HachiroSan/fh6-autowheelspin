@@ -5,6 +5,25 @@ import re
 from mega666.color import B, C, G, N, Y
 
 
+# ── Proportional distance thresholds ────────────────────────────────────────
+# These scale with capture dimensions so detection works at any window size.
+_Y_RATIO = 0.18   # max vertical distance between a label and its count
+_X_RATIO = 0.17   # max horizontal distance
+_AV_Y_RATIO = 0.18  # max vertical distance for standalone "available" words
+
+
+def _count_y_dist(height: int | None) -> int:
+    return int(height * _Y_RATIO) if height else 200
+
+
+def _count_x_dist(width: int | None) -> int:
+    return int(width * _X_RATIO) if width else 320
+
+
+def _avail_y_dist(height: int | None) -> int:
+    return int(height * _AV_Y_RATIO) if height else 200
+
+
 def _fuzzy_available(s: str) -> bool:
     s = s.strip().lower()
     return any(
@@ -19,8 +38,18 @@ def _fuzzy_available(s: str) -> bool:
     )
 
 
-def detect_wheelspins(texts):
+def detect_wheelspins(texts, height: int | None = None, width: int | None = None):
     """Parse OCR output to find Wheelspin widgets (Super + Regular).
+
+    Parameters
+    ----------
+    texts : list
+        OCR results — each element is ``(box, text, score)``.
+    height : int or None
+        Capture image height in pixels.  When *None* fallback static
+        distances are used (legacy behaviour).
+    width : int or None
+        Capture image width in pixels.
 
     Returns a list of dicts with keys:
         label, type ("super"|"regular"), available (int or None),
@@ -28,6 +57,10 @@ def detect_wheelspins(texts):
     """
     if not texts:
         return []
+
+    max_dy = _count_y_dist(height)
+    max_dx = _count_x_dist(width)
+    max_av_dy = _avail_y_dist(height)
 
     labels, counts, av_words = [], [], []
 
@@ -52,13 +85,12 @@ def detect_wheelspins(texts):
 
     all_xs = [lx for lx, *_ in labels] + [cx for cx, *_ in counts]
     mid_x = (min(all_xs) + max(all_xs)) / 2 if all_xs else 250
-    MAX_Y_DIST = 150
-
     wheelspins = []
     used_counts = set()
 
     for lx, ly, ltext, lscore in sorted(labels, key=lambda x: x[1]):
-        best, best_dist, best_ci = None, MAX_Y_DIST, -1
+        wtype = "super" if lx < mid_x else "regular"
+        best, best_dist, best_ci = None, float("inf"), -1
         for i, (cx, cy, num, cscore) in enumerate(counts):
             if i in used_counts:
                 continue
@@ -67,11 +99,13 @@ def detect_wheelspins(texts):
             )
             if not same_side:
                 continue
-            dist = abs(ly - cy)
+            dx = abs(lx - cx)
+            dy = abs(ly - cy)
+            if dx > max_dx or dy > max_dy:
+                continue
+            dist = dx + dy
             if dist < best_dist:
                 best_dist, best, best_ci = dist, (num, cx, cy, cscore), i
-
-        wtype = "super" if lx < mid_x else "regular"
 
         if best is not None:
             used_counts.add(best_ci)
@@ -92,7 +126,7 @@ def detect_wheelspins(texts):
                 )
         else:
             has_av_word = any(
-                abs(ly - ay) < MAX_Y_DIST
+                abs(ly - ay) < max_av_dy
                 and (lx < mid_x and ax < mid_x or lx >= mid_x and ax >= mid_x)
                 for ax, ay in av_words
             )

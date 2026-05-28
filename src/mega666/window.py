@@ -152,6 +152,15 @@ def capture(hwnd):
         return None
 
 
+def crop_bottom(img, fraction: float = 0.2):
+    """Return the bottom *fraction* of a numpy BGR image."""
+    if img is None:
+        return None
+    h = img.shape[0]
+    cut = int(h * (1 - fraction))
+    return img[cut:, :, :].copy()
+
+
 def resize_window(hwnd, target_w: int, target_h: int) -> bool:
     """MoveWindow to the given dimensions. Returns True on success."""
     try:

@@ -19,6 +19,7 @@ VK_SPACE = 0x20
 VK_RETURN = 0x0D
 VK_ESCAPE = 0x1B
 VK_LEFT = 0x25
+VK_DOWN = 0x28
 VK_RIGHT = 0x27
 VK_E = 0x45  # used by some Forza versions
 
@@ -60,6 +61,11 @@ def press_enter(hwnd: int) -> None:
 def press_left(hwnd: int) -> None:
     """Send Left Arrow (VK_LEFT) to *hwnd*."""
     _send_key(hwnd, VK_LEFT)
+
+
+def press_down(hwnd: int) -> None:
+    """Send Down Arrow (VK_DOWN) to *hwnd*."""
+    _send_key(hwnd, VK_DOWN)
 
 
 def press_right(hwnd: int) -> None:

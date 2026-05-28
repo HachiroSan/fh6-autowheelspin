@@ -17,6 +17,9 @@ from mega666.ui import (
 from mega666.window import capture, ensure_window, resize_window
 
 
+EARLY_DETECTION_HEIGHT_FRACTION = 0.8
+
+
 def _any_process_running(process_names: list[str]) -> bool:
     """Quick process existence check — useful before enumerating windows."""
     names_lower = {n.lower() for n in process_names}
@@ -46,6 +49,42 @@ def _format_result(texts, cap_ms, inf_ms):
             f"  [{i:3d}] \"{text}\" score={score} at ({cx:4d},{cy:4d})"
         )
     return "\n".join(lines)
+
+
+def _middle_vertical_crop(image, fraction: float = EARLY_DETECTION_HEIGHT_FRACTION):
+    """Return the middle vertical slice and its top offset."""
+    if image is None:
+        return None, 0
+
+    height, width = image.shape[:2]
+    if height <= 0 or width <= 0:
+        return None, 0
+
+    crop_h = max(1, int(height * fraction))
+    top = max((height - crop_h) // 2, 0)
+    return image[top : top + crop_h, :, :].copy(), top
+
+
+def _translate_ocr_boxes(texts, dx: int = 0, dy: int = 0):
+    """Translate OCR boxes from crop coordinates back to full-window coordinates."""
+    if not texts or (dx == 0 and dy == 0):
+        return texts
+
+    translated = []
+    for box, text, score in texts:
+        moved_box = [[point[0] + dx, point[1] + dy] for point in box]
+        translated.append((moved_box, text, score))
+    return translated
+
+
+def _ocr_early_detection_area(image):
+    """OCR only the middle 80% of the window for initial wheelspin detection."""
+    crop, top = _middle_vertical_crop(image)
+    if crop is None:
+        return [], 0.0
+
+    texts, infer_s = ocr_image(crop)
+    return _translate_ocr_boxes(texts, dy=top), infer_s
 
 
 def scan(process_names=None, verbose=True):
@@ -78,9 +117,10 @@ def scan(process_names=None, verbose=True):
         return None
     cap_ms = (time.perf_counter() - t0) * 1000
 
-    texts, infer_s = ocr_image(cap)
+    texts, infer_s = _ocr_early_detection_area(cap)
     inf_ms = infer_s * 1000
-    wheelspins = detect_wheelspins(texts)
+    h, w = cap.shape[:2]
+    wheelspins = detect_wheelspins(texts, height=h, width=w)
     result = {
         "texts": texts,
         "image": cap,
@@ -107,9 +147,10 @@ def _scan_silent(process_names):
     if cap is None:
         return None
     cap_ms = (time.perf_counter() - t0) * 1000
-    texts, infer_s = ocr_image(cap)
+    texts, infer_s = _ocr_early_detection_area(cap)
     inf_ms = infer_s * 1000
-    wheelspins = detect_wheelspins(texts)
+    h, w = cap.shape[:2]
+    wheelspins = detect_wheelspins(texts, height=h, width=w)
     return {
         "texts": texts,
         "image": cap,
