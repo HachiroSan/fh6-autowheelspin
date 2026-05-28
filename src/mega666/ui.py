@@ -100,20 +100,6 @@ def run_with_spinner(label: str, func):
     return result
 
 
-def watch_header(interval: float) -> None:
-    console.print(
-        Panel.fit(
-            f"[bold cyan]LIVE WATCH[/] [bright_black]refresh[/] {interval:g}s  [bright_black]stop[/] Ctrl+C",
-            border_style="cyan",
-            box=box.ROUNDED,
-        )
-    )
-
-
-def watch_tick() -> None:
-    console.rule(f"[bright_black]{time.strftime('%H:%M:%S')}[/]", style="bright_black")
-
-
 def render_scan_result(result: dict) -> None:
     """Render scanner output as a compact dashboard."""
     win = result["window"]
@@ -148,8 +134,7 @@ def _wheelspin_table(wheelspins: list[dict]) -> Table | Panel:
             "[bright_black]Make sure both wheelspin counts are visible and readable.[/]\n\n"
             "[bright_black]If the text is too small:[/]\n"
             "[bright_black]1.[/] Resize the window wider\n"
-            "[bright_black]2.[/] Increase the desktop resolution\n"
-            "[bright_black]3.[/] Or run with [cyan]--auto-resize[/]",
+            "[bright_black]2.[/] Increase the desktop resolution",
             border_style="yellow",
             box=box.ROUNDED,
             padding=(1, 2),
@@ -192,6 +177,7 @@ def render_resize_result(result: dict | None, clear: bool) -> None:
     if result is None:
         console.print("[red]failed[/]")
         return
+
     wheelspins = result["ui"]["wheelspins"]
     super_spin = next((w for w in wheelspins if w["type"] == "super"), None)
     regular = next((w for w in wheelspins if w["type"] == "regular"), None)
@@ -206,6 +192,7 @@ def render_resize_exhausted() -> None:
         Panel(
             "[bold bright_red]Are you sure you are on the My Horizon tab?[/]\n"
             "[bright_white]If yes, manually resize the window wider (1280px+) or use a higher desktop resolution.[/]\n"
+            "[bright_white]Also do not let the game window minimized.[/]\n"
             "[bright_black]Auto-resize exhausted; OCR is still not readable.[/]",
             border_style="yellow",
             box=box.ROUNDED,

@@ -5,10 +5,20 @@ import ctypes.wintypes
 
 import numpy as np
 import psutil
+import win32con
 import win32gui
 import win32process
 
 _cached_win = None
+
+
+def restore_if_minimized(hwnd) -> bool:
+    try:
+        if win32gui.IsIconic(hwnd):
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        return True
+    except Exception:
+        return False
 
 
 def find_window(target_names: list[str]):
@@ -25,6 +35,7 @@ def find_window(target_names: list[str]):
             if any(t in pn for t in target_names):
                 title = win32gui.GetWindowText(hwnd)
                 if title:
+                    restore_if_minimized(hwnd)
                     rect = win32gui.GetWindowRect(hwnd)
                     if rect[2] > rect[0] and rect[3] > rect[1]:
                         wins.append(
@@ -51,6 +62,7 @@ def ensure_window(target_names: list[str]):
     if _cached_win is not None:
         hwnd = _cached_win["hwnd"]
         if win32gui.IsWindow(hwnd) and win32gui.IsWindowVisible(hwnd):
+            restore_if_minimized(hwnd)
             rect = win32gui.GetWindowRect(hwnd)
             if rect[2] > rect[0] and rect[3] > rect[1]:
                 _cached_win["rect"] = rect
@@ -102,6 +114,7 @@ def capture_window(hwnd):
     Uses ``PW_RENDERFULLCONTENT`` so the game does **not** need to be in
     the foreground.
     """
+    restore_if_minimized(hwnd)
     left, top, right, bottom = win32gui.GetClientRect(hwnd)
     width = right - left
     height = bottom - top
@@ -158,8 +171,8 @@ def crop_bottom(img, fraction: float = 0.2):
 
 
 def resize_window(hwnd, target_w: int, target_h: int) -> bool:
-    """MoveWindow to the given dimensions. Returns True on success."""
     try:
+        restore_if_minimized(hwnd)
         rect = win32gui.GetWindowRect(hwnd)
         x, y = rect[0], rect[1]
         win32gui.MoveWindow(hwnd, x, y, target_w, target_h, True)

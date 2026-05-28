@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import signal
 import time
 
 import cv2
@@ -549,13 +550,25 @@ def auto_spin_wheelspin(
         current_count=start_count,
     )
     with SpinLiveView(state) as view:
-        view.event(f"Selecting {name}", status="Starting")
-        low_level_click_client(hwnd, click_pos[0], click_pos[1])
-        initial_bottom_reference = _capture_prompt_area(hwnd)
-        view.event(f"{name} selected; waiting for the first result", status="In progress")
-        _scan_wheelspin_total_after_click(
-            hwnd, before_total, wheel_type, stop_at, initial_bottom_reference, view
-        )
+        previous_sigint = signal.getsignal(signal.SIGINT)
+
+        def request_stop(_signum, _frame):
+            if view.poll_graceful_stop():
+                signal.signal(signal.SIGINT, previous_sigint)
+                raise KeyboardInterrupt
+            view.request_graceful_stop()
+
+        signal.signal(signal.SIGINT, request_stop)
+        try:
+            view.event(f"Selecting {name}", status="Starting")
+            low_level_click_client(hwnd, click_pos[0], click_pos[1])
+            initial_bottom_reference = _capture_prompt_area(hwnd)
+            view.event(f"{name} selected; waiting for the first result", status="In progress")
+            _scan_wheelspin_total_after_click(
+                hwnd, before_total, wheel_type, stop_at, initial_bottom_reference, view
+            )
+        finally:
+            signal.signal(signal.SIGINT, previous_sigint)
 
 
 def run_wheelspin_menu(result: dict | None) -> None:

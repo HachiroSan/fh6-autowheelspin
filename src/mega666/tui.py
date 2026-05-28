@@ -333,30 +333,16 @@ class SpinLiveView:
             self._live.update(self.render())
 
     def poll_graceful_stop(self) -> bool:
-        """Return True once the user requests a safe stop with Q or Esc."""
+        return self.state.graceful_stop_requested
+
+    def request_graceful_stop(self) -> None:
         if self.state.graceful_stop_requested:
-            return True
-
-        try:
-            import msvcrt
-        except ImportError:
-            return False
-
-        while msvcrt.kbhit():
-            key = msvcrt.getwch()
-            if key in {"\x00", "\xe0"}:
-                if msvcrt.kbhit():
-                    msvcrt.getwch()
-                continue
-            if key in {"q", "Q", "\x1b"}:
-                self.state.graceful_stop_requested = True
-                self.event(
-                    "User-triggered stop received. Please wait while the current reward flow finishes safely.",
-                    status="User stop requested",
-                )
-                return True
-
-        return False
+            return
+        self.state.graceful_stop_requested = True
+        self.event(
+            "User-triggered stop received. Press Ctrl+C again to force exit.",
+            status="User stop requested",
+        )
 
     def render(self):
         average = self.state.average_seconds_per_spin
@@ -436,7 +422,7 @@ class SpinLiveView:
                 Panel(
                     "[bold bright_red]USER STOP TRIGGERED[/]\n"
                     "[white]Finishing the current reward flow. "
-                    "please wait while MEGA666 returns to the wheelspin menu safely.",
+                    "press Ctrl+C again to force exit.",
                     title="USER-TRIGGERED STOP",
                     border_style="bright_red",
                     box=box.ROUNDED,
@@ -447,9 +433,9 @@ class SpinLiveView:
 
         shortcut = Panel(
             (
-                "[bold bright_red]User-triggered stop queued. Please wait.[/]"
+                "[bold bright_red]Stop queued. Press Ctrl+C again to force exit.[/]"
                 if self.state.graceful_stop_requested
-                else "[bold yellow]Q[/] or [bold yellow]Esc[/] graceful stop after current spin"
+                else "[bold yellow]Ctrl+C[/] graceful stop after current spin"
             ),
             title="SHORTCUT",
             border_style="bright_red" if self.state.graceful_stop_requested else "bright_black",

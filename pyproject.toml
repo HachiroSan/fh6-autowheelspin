@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "mega666"
 version = "0.1.0"
 description = "FH6 Auto Wheelspin"
+license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
     "rapidocr-onnxruntime>=1.2",

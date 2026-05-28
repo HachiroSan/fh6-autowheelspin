@@ -141,7 +141,6 @@ def _scan_window(win):
 
 
 def _scan_silent(process_names):
-    """Minimal scan — no prints, returns the same dict as :func:`scan`."""
     if not _any_process_running(process_names):
         return None
     win = ensure_window(process_names)
@@ -151,17 +150,12 @@ def _scan_silent(process_names):
 
 
 def scan_auto_resize(process_names=None, verbose=True):
-    """Progressively enlarge the game window until both wheelspins are readable.
-
-    Returns the last scan result dict (with an extra *resize_attempts* key)
-    or *None* if the window cannot be found.
-    """
     if process_names is None:
         process_names = ["forzahorizon6.exe", "forzahorizon5.exe"]
 
-    WIDTH_STEPS = [700, 800, 900, 960, 1100, 1280]
+    width_steps = [700, 800, 900, 960, 1100, 1280]
     attempts = 0
-    res = None
+    result = None
 
     if not _any_process_running(process_names):
         if verbose:
@@ -178,51 +172,41 @@ def scan_auto_resize(process_names=None, verbose=True):
 
     current_w, current_h = win["w"], win["h"]
     aspect = current_h / current_w if current_w > 0 else 9 / 16
-    targets = sorted(
-        set(w for w in WIDTH_STEPS if w >= current_w) | {current_w}
-    )
+    targets = sorted(set(w for w in width_steps if w >= current_w) | {current_w})
 
     if verbose:
         render_resize_start(current_w, current_h)
 
     for target_w in targets:
-        if win is None:
-            if verbose:
-                render_resize_result(None, clear=False)
-            break
+        target_h = max(int(target_w * aspect), 400)
 
-        target_h = int(target_w * aspect)
-        if target_h < 400:
-            target_h = 400
+        if verbose:
+            render_resize_attempt(target_w, target_h)
 
         if target_w != current_w:
-            if verbose:
-                render_resize_attempt(target_w, target_h)
             resize_window(win["hwnd"], target_w, target_h)
             time.sleep(0.5)
             win = ensure_window(process_names)
-        elif verbose:
-            render_resize_attempt(target_w, target_h)
+            if not win:
+                if verbose:
+                    render_resize_result(None, clear=False)
+                break
 
-        res = _scan_silent(process_names)
+        result = _scan_silent(process_names)
         attempts += 1
+        wheelspins = result["ui"]["wheelspins"] if result else []
 
-        ws = res["ui"]["wheelspins"] if res else []
+        if result and is_detection_clear(wheelspins):
+            if verbose:
+                render_resize_result(result, clear=True)
+            result["resize_attempts"] = attempts
+            return result
 
-        if res and is_detection_clear(ws):
-            if verbose:
-                render_resize_result(res, clear=True)
-            res["resize_attempts"] = attempts
-            return res
-        elif res:
-            if verbose:
-                render_resize_result(res, clear=False)
-        else:
-            if verbose:
-                render_resize_result(None, clear=False)
+        if verbose:
+            render_resize_result(result, clear=False)
 
     if verbose:
         render_resize_exhausted()
-    if res is not None:
-        res["resize_attempts"] = attempts
-    return res
+    if result is not None:
+        result["resize_attempts"] = attempts
+    return result
