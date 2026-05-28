@@ -4,6 +4,9 @@
 
 OCR-based wheelspin helper for Forza Horizon 6. It finds the game, reads the available Wheelspin and Super Wheelspin counts and can automate rolling them in the background using low-level window and input automation. One of its strongest points is that it can keep running in a windowed, low-resolution game window without using much system resources.
 
+> Important: if you run the game in windowed mode and there are black bars around the game window, the bot might not work. Make sure to resize properly until no black bars seen.
+
+
 ## Requirements
 
 - Python 3.10+
