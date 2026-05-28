@@ -54,7 +54,7 @@ def preflight(process_names: list[str], *, verbose: bool = True) -> bool:
     if not proc_found:
         names = ", ".join(process_names)
         if verbose:
-            console.print(f"[red]×[/] Target process not found; searched for {names}")
+            console.print(f"[red]×[/] Target process not found")
             console.print("[yellow]![/] Start Forza Horizon 6 before scanning")
         ok_status = False
 

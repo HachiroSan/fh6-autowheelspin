@@ -21,7 +21,7 @@ def main():
         "--auto-resize",
         "-r",
         action="store_true",
-        help="Resize the game window until OCR reads clearly",
+        help="Auto-resize the game window until OCR reads clearly",
     )
     args = parser.parse_args()
 

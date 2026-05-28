@@ -134,7 +134,8 @@ def _wheelspin_table(wheelspins: list[dict]) -> Table | Panel:
             "[bright_black]Make sure both wheelspin counts are visible and readable.[/]\n\n"
             "[bright_black]If the text is too small:[/]\n"
             "[bright_black]1.[/] Resize the window wider\n"
-            "[bright_black]2.[/] Increase the desktop resolution",
+            "[bright_black]2.[/] Increase the desktop resolution\n"
+            "[bright_black]3.[/] Or run with [cyan]--auto-resize[/]",
             border_style="yellow",
             box=box.ROUNDED,
             padding=(1, 2),
