@@ -109,25 +109,11 @@ def scan(process_names=None, verbose=True):
             fail("FH6 window not found (process is running but no visible window)")
         return None
 
-    t0 = time.perf_counter()
-    cap = capture(win["hwnd"])
-    if cap is None:
+    result = _scan_window(win)
+    if result is None:
         if verbose:
             fail("capture failed (PrintWindow)")
         return None
-    cap_ms = (time.perf_counter() - t0) * 1000
-
-    texts, infer_s = _ocr_early_detection_area(cap)
-    inf_ms = infer_s * 1000
-    h, w = cap.shape[:2]
-    wheelspins = detect_wheelspins(texts, height=h, width=w)
-    result = {
-        "texts": texts,
-        "image": cap,
-        "window": win,
-        "timing": {"capture_ms": cap_ms, "infer_ms": inf_ms},
-        "ui": {"wheelspins": wheelspins},
-    }
 
     if verbose:
         render_scan_result(result)
@@ -135,13 +121,7 @@ def scan(process_names=None, verbose=True):
     return result
 
 
-def _scan_silent(process_names):
-    """Minimal scan — no prints, returns the same dict as :func:`scan`."""
-    if not _any_process_running(process_names):
-        return None
-    win = ensure_window(process_names)
-    if not win:
-        return None
+def _scan_window(win):
     t0 = time.perf_counter()
     cap = capture(win["hwnd"])
     if cap is None:
@@ -158,6 +138,16 @@ def _scan_silent(process_names):
         "timing": {"capture_ms": cap_ms, "infer_ms": inf_ms},
         "ui": {"wheelspins": wheelspins},
     }
+
+
+def _scan_silent(process_names):
+    """Minimal scan — no prints, returns the same dict as :func:`scan`."""
+    if not _any_process_running(process_names):
+        return None
+    win = ensure_window(process_names)
+    if not win:
+        return None
+    return _scan_window(win)
 
 
 def scan_auto_resize(process_names=None, verbose=True):
@@ -185,7 +175,6 @@ def scan_auto_resize(process_names=None, verbose=True):
         if verbose:
             fail("FH6 window not found (process is running but no visible window)")
         return None
-    assert win is not None
 
     current_w, current_h = win["w"], win["h"]
     aspect = current_h / current_w if current_w > 0 else 9 / 16

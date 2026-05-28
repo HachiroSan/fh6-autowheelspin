@@ -14,7 +14,6 @@ WM_LBUTTONUP = 0x0202
 
 MK_LBUTTON = 0x0001
 
-# Virtual-key codes
 VK_SPACE = 0x20
 VK_RETURN = 0x0D
 VK_ESCAPE = 0x1B

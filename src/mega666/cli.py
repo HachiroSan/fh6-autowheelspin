@@ -42,13 +42,15 @@ def main():
     args = parser.parse_args()
 
     names = [args.process]
-    banner(names)
 
     if not args.no_preflight and not preflight(names):
         sys.exit(1)
 
     if not args.no_preflight:
         ocr_warmup()
+
+    console.clear()
+    banner(names)
 
     if args.watch > 0:
         scan(names, verbose=False)

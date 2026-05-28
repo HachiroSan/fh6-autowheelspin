@@ -8,8 +8,6 @@ import psutil
 import win32gui
 import win32process
 
-# ── Cached window ──────────────────────────────────────────────────────────
-
 _cached_win = None
 
 
@@ -62,8 +60,6 @@ def ensure_window(target_names: list[str]):
     _cached_win = find_window(target_names)
     return _cached_win
 
-
-# ── Background window capture (PrintWindow) ───────────────────────────────
 
 PW_RENDERFULLCONTENT = 2
 

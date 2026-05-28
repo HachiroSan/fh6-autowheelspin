@@ -35,9 +35,9 @@ def banner(process_names: Iterable[str] | None = None) -> None:
                 Align.center(Text(ASCII_ART, style="bold bright_magenta")),
                 Align.center(subtitle),
             ),
-            border_style="bright_magenta",
-            box=box.DOUBLE_EDGE,
-            padding=(1, 2),
+            border_style="magenta",
+            box=box.ROUNDED,
+            padding=(0, 1),
         )
     )
 
@@ -117,56 +117,67 @@ def watch_tick() -> None:
 def render_scan_result(result: dict) -> None:
     """Render scanner output as a compact dashboard."""
     win = result["window"]
-    timing = result["timing"]
-    texts = result["texts"]
-    total = timing["capture_ms"] + timing["infer_ms"]
+    wheelspins = result["ui"]["wheelspins"]
 
-    meta = Table.grid(expand=True)
-    meta.add_column(ratio=1)
-    meta.add_column(ratio=1)
-    meta.add_column(ratio=1)
-    meta.add_row(
-        f"[bold cyan]Window[/]\n{win['title']}\n[bright_black]{win['w']}×{win['h']}[/]",
-        f"[bold magenta]OCR[/]\n{len(texts)} text regions\n[bright_black]{timing['infer_ms']:.0f}ms inference[/]",
-        f"[bold green]Cycle[/]\n{total:.0f}ms\n[bright_black]{timing['capture_ms']:.0f}ms capture[/]",
+    process = Table.grid(expand=True)
+    process.add_column(style="bright_black", ratio=1)
+    process.add_column(ratio=2)
+    process.add_column(style="bright_black", ratio=1)
+    process.add_column(ratio=1)
+    process.add_row("Process", f"[green]{win['name']}[/]", "Window", f"[magenta]{win['w']}×{win['h']}[/]")
+    process.add_row("PID", str(win["pid"]), "Title", win["title"])
+
+    rewards = _wheelspin_table(wheelspins)
+
+    console.print(
+        Panel(
+            Group(process, rewards),
+            title="MAIN",
+            border_style="cyan",
+            box=box.ROUNDED,
+            padding=(1, 2),
+        )
     )
 
-    console.print(Panel(meta, title="SCAN", border_style="cyan", box=box.ROUNDED))
-    render_wheelspins(result["ui"]["wheelspins"])
+
+def _wheelspin_table(wheelspins: list[dict]) -> Table | Panel:
+    if not wheelspins:
+        return Panel(
+            "[bold yellow]No wheelspins detected[/]\n\n"
+            "[white]Open Forza and go to [bold cyan]My Horizon tab[/][/]\n"
+            "[bright_black]Make sure both wheelspin counts are visible and readable.[/]\n\n"
+            "[bright_black]If the text is too small:[/]\n"
+            "[bright_black]1.[/] Resize the window wider\n"
+            "[bright_black]2.[/] Increase the desktop resolution\n"
+            "[bright_black]3.[/] Or run with [cyan]--auto-resize[/]",
+            border_style="yellow",
+            box=box.ROUNDED,
+            padding=(1, 2),
+        )
+
+    table = Table(
+        box=box.SIMPLE,
+        border_style="bright_black",
+        header_style="bold bright_black",
+        show_lines=False,
+        expand=True,
+        padding=(0, 1),
+    )
+    table.add_column("Reward", style="white")
+    table.add_column("Available", justify="right", style="bold green")
+
+    for wheelspin in wheelspins:
+        count = wheelspin["available"]
+        available = "?" if count is None else str(count)
+        name = "Super Wheelspin" if wheelspin["type"] == "super" else "Wheelspin"
+        table.add_row(name, available)
+
+    return table
 
 
 def render_wheelspins(wheelspins: list[dict]) -> None:
     """Render detected wheelspin state."""
-    if not wheelspins:
-        console.print(
-            Panel(
-                "[yellow]No wheelspins detected[/]\n"
-                "[bright_black]Open the My Horizon tab. If you are already there, try using a larger game window or a higher resolution.[/]",
-                title="UI STATE",
-                border_style="yellow",
-                box=box.ROUNDED,
-            )
-        )
-        return
-
-    table = Table(
-        title="UI STATE",
-        box=box.SIMPLE_HEAVY,
-        border_style="bright_magenta",
-        header_style="bold bright_magenta",
-        show_lines=False,
-    )
-    table.add_column("Reward", style="cyan")
-    table.add_column("Available", justify="right")
-    table.add_column("Confidence", justify="right", style="bright_black")
-
-    for wheelspin in wheelspins:
-        count = wheelspin["available"]
-        available = "[yellow]?[/]" if count is None else f"[bold green]{count}[/]"
-        name = "Super Wheelspin" if wheelspin["type"] == "super" else "Wheelspin"
-        table.add_row(name, available, f"{wheelspin['score']:.0%}")
-
-    console.print(table)
+    console.print(_wheelspin_table(wheelspins))
 
 
 def render_resize_start(width: int, height: int) -> None:
@@ -193,8 +204,9 @@ def render_resize_result(result: dict | None, clear: bool) -> None:
 def render_resize_exhausted() -> None:
     console.print(
         Panel(
-            "[yellow]Auto-resize exhausted; OCR is still not readable.[/]\n"
-            "[bright_black]Manually resize the window wider (1280px+) or use a higher desktop resolution.[/]",
+            "[bold bright_red]Are you sure you are on the My Horizon tab?[/]\n"
+            "[bright_white]If yes, manually resize the window wider (1280px+) or use a higher desktop resolution.[/]\n"
+            "[bright_black]Auto-resize exhausted; OCR is still not readable.[/]",
             border_style="yellow",
             box=box.ROUNDED,
         )

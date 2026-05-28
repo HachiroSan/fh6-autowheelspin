@@ -2,11 +2,13 @@
 
 import ctypes
 import ctypes.wintypes
+import time
 
 import psutil
 import win32gui
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from mega666.ui import preflight_row, preflight_summary, section
+from mega666.ui import console, preflight_summary
 
 
 def check_process_running(process_names: list[str]) -> bool:
@@ -22,46 +24,65 @@ def check_process_running(process_names: list[str]) -> bool:
     return False
 
 
-def preflight(process_names: list[str]) -> bool:
+def preflight(process_names: list[str], *, verbose: bool = True) -> bool:
     """Run all preflight checks.
 
     Returns True if everything is ready, False otherwise.
     Callers should abort the scan when this returns False.
     """
-    section("Preflight", "validating capture stack")
+    progress = None
+    task = None
+    if verbose:
+        progress = Progress(
+            SpinnerColumn("dots12", style="bright_magenta"),
+            TextColumn("[bold cyan]{task.description}"),
+            console=console,
+            transient=True,
+        )
+        progress.start()
+        task = progress.add_task("Checking capture stack", total=None)
+
+    def step(message: str) -> None:
+        if progress is not None and task is not None:
+            progress.update(task, description=message)
+            time.sleep(0.12)
+
     ok_status = True
 
-    # ── 1. Process existence ─────────────────────────────────────────────
+    step("Checking target process")
     proc_found = check_process_running(process_names)
     if not proc_found:
         names = ", ".join(process_names)
-        preflight_row("Target process", "fail", f"not found; searched for {names}")
-        preflight_row("Launch hint", "warn", "start Forza Horizon 6 before scanning")
+        if verbose:
+            console.print(f"[red]×[/] Target process not found; searched for {names}")
+            console.print("[yellow]![/] Start Forza Horizon 6 before scanning")
         ok_status = False
-    else:
-        preflight_row("Target process", "ok", "running and visible to psutil")
 
-    # ── 2. Win32 / GDI accessibility ─────────────────────────────────────
+    step("Checking Win32 desktop capture")
     try:
         hwnd = win32gui.GetDesktopWindow()
         rect = win32gui.GetWindowRect(hwnd)
-        if rect[2] > 0 and rect[3] > 0:
-            preflight_row("Win32 desktop", "ok", "GDI capture surface is accessible")
-        else:
-            preflight_row("Win32 desktop", "warn", "desktop has zero size; capture may fail")
+        if rect[2] <= 0 or rect[3] <= 0:
+            if verbose:
+                console.print("[yellow]![/] Desktop has zero size; capture may fail")
     except Exception as e:
-        preflight_row("Win32 desktop", "fail", f"API error: {e}")
+        if verbose:
+            console.print(f"[red]×[/] Win32 desktop API error: {e}")
         ok_status = False
 
-    # ── 3. GDI / User32 library load (warmup) ───────────────────────────
+    step("Checking system libraries")
     try:
         _ = ctypes.windll.user32
         _ = ctypes.windll.gdi32
-        preflight_row("System libraries", "ok", "User32 and GDI32 are loaded")
     except Exception as e:
-        preflight_row("System libraries", "fail", f"load failed: {e}")
+        if verbose:
+            console.print(f"[red]×[/] System libraries load failed: {e}")
         ok_status = False
 
-    preflight_summary(ok_status)
+    if progress is not None:
+        progress.stop()
+
+    if verbose and not ok_status:
+        preflight_summary(ok_status)
 
     return ok_status

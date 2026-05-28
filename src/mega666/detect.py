@@ -5,7 +5,6 @@ import re
 from mega666.color import B, C, G, N, Y
 
 
-# ── Proportional distance thresholds ────────────────────────────────────────
 # These scale with capture dimensions so detection works at any window size.
 _Y_RATIO = 0.18   # max vertical distance between a label and its count
 _X_RATIO = 0.17   # max horizontal distance
@@ -150,7 +149,7 @@ def detect_wheelspins(texts, height: int | None = None, width: int | None = None
 
 
 def ui_box(wheelspins) -> str:
-    """Return a polished multi-line summary string."""
+    """Return a multi-line summary string."""
     if not wheelspins:
         return (
             f"  {Y}No wheelspins detected{N}\n"

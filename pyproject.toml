@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mega666"
 version = "0.1.0"
-description = "Forza Horizon 6 — Background Window OCR Scanner"
+description = "FH6 Auto Wheelspin"
 requires-python = ">=3.10"
 dependencies = [
     "rapidocr-onnxruntime>=1.2",
@@ -14,6 +14,9 @@ dependencies = [
     "psutil>=5.9",
     "colorama>=0.4.6",
     "rich>=13.7",
+]
+authors = [
+  { name = "Hachiro"}
 ]
 
 [project.scripts]
